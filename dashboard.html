@@ -1,0 +1,1202 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>لوحة تحكم المدير</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+:root {
+  --bg:      #07090f;
+  --surface: #0d1117;
+  --card:    #111827;
+  --border:  #1f2937;
+  --border2: #374151;
+  --blue:    #3b82f6;
+  --green:   #22c55e;
+  --amber:   #f59e0b;
+  --red:     #ef4444;
+  --purple:  #a855f7;
+  --cyan:    #06b6d4;
+  --t1:      #f9fafb;
+  --t2:      #9ca3af;
+  --t3:      #6b7280;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Segoe UI',Tahoma,sans-serif;background:var(--bg);color:var(--t1);min-height:100vh}
+
+/* ── Header ── */
+.header{
+  display:flex;justify-content:space-between;align-items:center;
+  padding:16px 24px;background:var(--surface);
+  border-bottom:1px solid var(--border);position:sticky;top:0;z-index:100;
+}
+.header-left{display:flex;align-items:center;gap:12px}
+.logo{font-size:18px;font-weight:700;color:var(--t1)}
+.live{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--t3)}
+.dot{width:7px;height:7px;background:var(--green);border-radius:50%;animation:pulse 1.5s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+.last-update{font-size:12px;color:var(--t3);background:var(--card);padding:5px 12px;border-radius:20px;border:1px solid var(--border)}
+
+/* ── Main layout ── */
+.main{padding:20px 24px;max-width:1400px;margin:0 auto}
+
+/* ── Branch & period selectors ── */
+.selectors{display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;flex-wrap:wrap;gap:10px}
+.pill-group{display:flex;gap:6px;flex-wrap:wrap}
+.pill{
+  padding:6px 16px;border-radius:20px;border:1px solid var(--border2);
+  background:transparent;color:var(--t2);cursor:pointer;font-size:13px;transition:.15s;
+}
+.pill:hover{border-color:var(--blue);color:var(--blue)}
+.pill.active{background:var(--blue);border-color:var(--blue);color:#fff;font-weight:600}
+.pill.b1.active{background:var(--blue)}
+.pill.b2.active{background:var(--purple)}
+.pill.ball.active{background:var(--cyan);border-color:var(--cyan)}
+
+/* ── KPI cards ── */
+.kpi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-bottom:20px}
+.kpi{
+  background:var(--card);border:1px solid var(--border);border-radius:12px;
+  padding:16px;position:relative;overflow:hidden;
+}
+.kpi::after{
+  content:'';position:absolute;top:0;right:0;width:3px;height:100%;
+}
+.kpi.blue::after{background:var(--blue)}
+.kpi.green::after{background:var(--green)}
+.kpi.amber::after{background:var(--amber)}
+.kpi.purple::after{background:var(--purple)}
+.kpi.cyan::after{background:var(--cyan)}
+.kpi.red::after{background:var(--red)}
+.kpi-icon{font-size:18px;margin-bottom:6px}
+.kpi-label{font-size:11px;color:var(--t3);margin-bottom:4px;text-transform:uppercase;letter-spacing:.04em}
+.kpi-val{font-size:22px;font-weight:700;color:var(--t1);margin-bottom:6px;line-height:1}
+.kpi-sub{font-size:11px;color:var(--t3)}
+.badge{
+  display:inline-flex;align-items:center;gap:3px;
+  font-size:11px;font-weight:600;padding:2px 8px;border-radius:8px;
+}
+.badge.up{background:#14532d;color:var(--green)}
+.badge.down{background:#450a0a;color:var(--red)}
+.badge.flat{background:var(--border);color:var(--t3)}
+
+/* ── Nav tabs ── */
+.nav-tabs{display:flex;gap:4px;border-bottom:1px solid var(--border);margin-bottom:20px;overflow-x:auto}
+.nav-tab{
+  padding:10px 20px;font-size:13px;color:var(--t3);cursor:pointer;
+  border-bottom:2px solid transparent;white-space:nowrap;transition:.15s;
+}
+.nav-tab:hover{color:var(--t1)}
+.nav-tab.active{color:var(--blue);border-bottom-color:var(--blue);font-weight:600}
+
+/* ── Tab content ── */
+.tab-content{display:none}
+.tab-content.active{display:block}
+
+/* ── Grid layouts ── */
+.grid-2{display:grid;grid-template-columns:2fr 1fr;gap:16px;margin-bottom:16px}
+.grid-2-eq{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px}
+.grid-3{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:16px}
+@media(max-width:900px){.grid-2,.grid-2-eq,.grid-3{grid-template-columns:1fr}}
+
+/* ── Box ── */
+.box{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:18px}
+.box-title{font-size:13px;color:var(--t2);margin-bottom:16px;font-weight:500}
+.box-title span{color:var(--t3);font-weight:400;font-size:11px;margin-right:6px}
+
+/* ── Peak hour highlight cards ── */
+.highlight-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-bottom:16px}
+.highlight{
+  background:var(--surface);border:1px solid var(--border);border-radius:10px;
+  padding:14px;text-align:center;
+}
+.highlight-label{font-size:11px;color:var(--t3);margin-bottom:4px}
+.highlight-val{font-size:20px;font-weight:700}
+.highlight-sub{font-size:11px;color:var(--t3);margin-top:4px}
+.col-blue{color:var(--blue)}
+.col-green{color:var(--green)}
+.col-amber{color:var(--amber)}
+.col-red{color:var(--red)}
+.col-purple{color:var(--purple)}
+
+/* ── Products table ── */
+.prod-table{width:100%;border-collapse:collapse}
+.prod-table th{font-size:11px;color:var(--t3);text-align:right;padding:8px 10px;border-bottom:1px solid var(--border);text-transform:uppercase}
+.prod-table td{font-size:13px;padding:10px 10px;border-bottom:1px solid var(--surface);color:var(--t1)}
+.prod-table tr:last-child td{border:none}
+.prod-table tr:hover td{background:var(--surface)}
+.rank{color:var(--t3);font-size:12px}
+.bar-wrap{background:var(--border);border-radius:3px;height:4px;margin-top:4px;overflow:hidden}
+.bar-fill{height:100%;border-radius:3px;transition:width .5s}
+
+/* ── Combo cards ── */
+.combo-list{display:flex;flex-direction:column;gap:8px}
+.combo-item{
+  display:flex;justify-content:space-between;align-items:center;
+  background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:10px 14px;
+}
+.combo-names{font-size:13px;color:var(--t1)}
+.combo-names span{color:var(--t3);font-size:11px;margin:0 4px}
+.combo-times{font-size:12px;color:var(--amber);font-weight:600}
+
+/* ── Stock alerts ── */
+.stock-list{display:flex;flex-direction:column;gap:6px}
+.stock-item{
+  display:flex;justify-content:space-between;align-items:center;
+  padding:8px 12px;border-radius:8px;background:var(--surface);border:1px solid var(--border);
+}
+.stock-name{font-size:13px;color:var(--t1)}
+.stock-qty{font-size:13px;font-weight:600}
+.qty-critical{color:var(--red)}
+.qty-low{color:var(--amber)}
+.qty-ok{color:var(--green)}
+
+/* ── Day of week ── */
+.dow-names{font-size:11px;color:var(--t3);text-align:center;margin-top:6px}
+
+/* ── Breadcrumb drill-down ── */
+.breadcrumb{
+  display:flex;align-items:center;flex-wrap:wrap;gap:4px;
+  padding:10px 16px;background:var(--surface);
+  border:1px solid var(--border);border-radius:10px;
+  margin-bottom:16px;font-size:13px;
+}
+.bc-link{color:var(--blue);cursor:pointer;padding:2px 8px;border-radius:5px;transition:.15s}
+.bc-link:hover{background:rgba(59,130,246,.15)}
+.bc-sep{color:var(--t3);padding:0 2px;font-size:16px}
+.bc-current{color:var(--t1);font-weight:600;padding:2px 8px}
+.drill-hint{font-size:11px;color:var(--t3);text-align:center;margin-top:6px;font-style:italic}
+
+/* ── No data ── */
+.no-data{text-align:center;padding:32px;color:var(--t3);font-size:13px}
+
+/* ── Setup notice ── */
+.setup{
+  background:#0c1a2e;border:1px solid var(--blue);border-radius:10px;
+  padding:14px 18px;margin-bottom:20px;font-size:13px;line-height:1.9;color:#93c5fd;
+}
+.setup strong{color:#60a5fa}
+.setup code{background:var(--bg);padding:1px 7px;border-radius:4px;font-size:12px;color:#a5f3fc}
+
+/* ── Refresh button ── */
+.refresh-btn{
+  background:transparent;border:1px solid var(--border2);color:var(--t2);
+  padding:5px 14px;border-radius:20px;cursor:pointer;font-size:12px;transition:.15s;
+}
+.refresh-btn:hover{border-color:var(--blue);color:var(--blue)}
+.refresh-btn.loading{opacity:.5;cursor:default}
+.loading-dot{display:inline-block;animation:spin 1s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+</style>
+</head>
+<body>
+
+<!-- ── Header ── -->
+<div class="header">
+  <div class="header-left">
+    <div class="logo">لوحة تحكم المدير</div>
+    <div class="live"><span class="dot"></span>مباشر</div>
+  </div>
+  <div style="display:flex;align-items:center;gap:10px">
+    <button class="refresh-btn" id="refresh-btn" onclick="manualRefresh()">↻ تحديث</button>
+    <div class="last-update" id="last-update">جارٍ التحميل...</div>
+  </div>
+</div>
+
+<div class="main">
+
+<div class="setup" id="setup-notice">
+  <strong>⚙️ الإعداد:</strong>
+  ضع رابط Apps Script GET في <code>APPS_SCRIPT_URL</code> أدناه.
+  الداشبورد يعمل الآن ببيانات تجريبية.
+</div>
+
+<!-- ── Selectors ── -->
+<div class="selectors">
+  <div class="pill-group" id="branch-pills"></div>
+  <div class="pill-group" id="period-pills">
+    <button class="pill active" data-period="day"   onclick="setPeriod(this)">اليوم</button>
+    <button class="pill"        data-period="week"  onclick="setPeriod(this)">الأسبوع</button>
+    <button class="pill"        data-period="month" onclick="setPeriod(this)">الشهر</button>
+    <button class="pill"        data-period="year"  onclick="setPeriod(this)">السنة</button>
+  </div>
+</div>
+
+<!-- ── KPI row ── -->
+<div class="kpi-grid" id="kpis"></div>
+
+<!-- ── Nav tabs ── -->
+<div class="nav-tabs">
+  <div class="nav-tab active" onclick="setTab('overview',this)">لمحة عامة</div>
+  <div class="nav-tab"        onclick="setTab('trends',this)">الاتجاهات</div>
+  <div class="nav-tab"        onclick="setTab('hours',this)">تحليل تفاعلي</div>
+  <div class="nav-tab"        onclick="setTab('products',this)">المنتجات</div>
+  <div class="nav-tab"        onclick="setTab('branches',this)">الفروع</div>
+</div>
+
+<!-- ═══════════ TAB: Overview ═══════════ -->
+<div class="tab-content active" id="tab-overview">
+  <div class="grid-2">
+    <div class="box">
+      <div class="box-title">مبيعات آخر 7 أيام</div>
+      <canvas id="chart-overview-line" height="130"></canvas>
+    </div>
+    <div class="box">
+      <div class="box-title">طرق الدفع <span>الشهر الحالي</span></div>
+      <canvas id="chart-payment" height="200"></canvas>
+    </div>
+  </div>
+  <div class="grid-3">
+    <div class="box" id="box-top1">
+      <div class="box-title">أعلى منتج مبيعاً</div>
+      <div id="top1-content" class="no-data">—</div>
+    </div>
+    <div class="box" id="box-peak-hour">
+      <div class="box-title">ساعة الذروة</div>
+      <div id="peak-hour-content" class="no-data">—</div>
+    </div>
+    <div class="box" id="box-best-day">
+      <div class="box-title">أفضل يوم في الأسبوع</div>
+      <div id="best-day-content" class="no-data">—</div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════ TAB: Trends ═══════════ -->
+<div class="tab-content" id="tab-trends">
+  <div class="box" style="margin-bottom:16px">
+    <div class="box-title">اتجاه المبيعات الشهري <span>آخر 13 شهر</span></div>
+    <canvas id="chart-monthly" height="110"></canvas>
+  </div>
+  <div class="grid-2">
+    <div class="box">
+      <div class="box-title">اتجاه المبيعات السنوي</div>
+      <canvas id="chart-yearly" height="150"></canvas>
+    </div>
+    <div class="box">
+      <div class="box-title">أداء أيام الأسبوع <span>آخر 90 يوم</span></div>
+      <canvas id="chart-dow" height="150"></canvas>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════ TAB: Peak Hours (dynamic) ═══════════ -->
+<div class="tab-content" id="tab-hours">
+  <div class="highlight-row" id="hours-highlights"></div>
+  <div id="hours-charts"></div>
+</div>
+
+<!-- ═══════════ TAB: Products ═══════════ -->
+<div class="tab-content" id="tab-products">
+  <div class="grid-2">
+    <div class="box">
+      <div class="box-title">أكثر المنتجات مبيعاً <span>الشهر الحالي</span></div>
+      <table class="prod-table" id="table-top"></table>
+    </div>
+    <div class="box">
+      <div class="box-title">أقل المنتجات مبيعاً <span>الشهر الحالي</span></div>
+      <table class="prod-table" id="table-bottom"></table>
+    </div>
+  </div>
+  <div class="box">
+    <div class="box-title">أكثر الكومبو طلباً <span>منتجان يُطلبان معاً في نفس الفاتورة</span></div>
+    <div class="combo-list" id="combo-list"></div>
+  </div>
+</div>
+
+<!-- ═══════════ TAB: Branches ═══════════ -->
+<div class="tab-content" id="tab-branches">
+  <div class="box" style="margin-bottom:16px">
+    <div class="box-title">مقارنة المبيعات بين الفروع</div>
+    <canvas id="chart-branches" height="120"></canvas>
+  </div>
+  <div class="box">
+    <div class="box-title">تفاصيل الفروع</div>
+    <table class="prod-table" id="table-branches"></table>
+  </div>
+</div>
+
+</div><!-- /main -->
+
+<script>
+// ══════════════════════════════════════════════════════
+// إعدادات
+// ══════════════════════════════════════════════════════
+const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxYfmV03JIMIZWxwsrJEiGBCdmTvso7UucUYK0-7SoHXkdOcKMPQ0kWnFPvWXrufysA/exec';
+
+// ── Chart.js defaults ──────────────────────────────
+Chart.defaults.color          = '#9ca3af';
+Chart.defaults.borderColor    = '#1f2937';
+Chart.defaults.font.family    = "'Segoe UI', Tahoma, sans-serif";
+Chart.defaults.font.size      = 12;
+Chart.defaults.plugins.legend.labels.boxWidth = 12;
+
+// ── State ──────────────────────────────────────────
+let allBranches   = [];
+let currentBranch = 'all';
+let currentPeriod = 'day';
+let charts        = {};
+const COLORS = ['#3b82f6','#a855f7','#f59e0b','#22c55e','#ef4444','#06b6d4'];
+const DOW_AR = ['الأحد','الاثنين','الثلاثاء','الأربعاء','الخميس','الجمعة','السبت'];
+const MONTH_AR = ['يناير','فبراير','مارس','أبريل','مايو','يونيو','يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر'];
+
+function periodToDrillState() {
+  const now = new Date();
+  const y = now.getFullYear().toString();
+  const m = now.toISOString().slice(0,7);
+  const w = Math.ceil(now.getDate()/7);
+  const d = now.toISOString().slice(0,10);
+  if (currentPeriod==='day')   return {level:'hour',  year:y, month:m, week:w, day:d};
+  if (currentPeriod==='week')  return {level:'day',   year:y, month:m, week:w, day:null};
+  if (currentPeriod==='month') return {level:'week',  year:y, month:m, week:null, day:null};
+  /* year */                   return {level:'month', year:y, month:null, week:null, day:null};
+}
+
+let drillState = periodToDrillState();
+
+// ══════════════════════════════════════════════════════
+// بيانات تجريبية
+// ══════════════════════════════════════════════════════
+function generateDemo() {
+  function hrs30(offset) {
+    return Array.from({length:24},(_,h)=>{
+      const base = [0,0,0,0,0,0,50,200,800,1200,900,1100,
+                    1500,1200,800,600,900,1800,2200,2000,1600,1200,800,300];
+      return {h, s: Math.round((base[h]||0)*(1+offset+Math.random()*.3)), i: Math.round((base[h]||0)/200)};
+    });
+  }
+  function monthly(offset) {
+    const now = new Date(); const res=[];
+    for(let i=12;i>=0;i--){
+      const d=new Date(now); d.setMonth(d.getMonth()-i);
+      const ym=d.toISOString().slice(0,7);
+      res.push({m:ym,s:Math.round((8000+Math.random()*12000)*(1+offset)),i:Math.round(40+Math.random()*60)});
+    }
+    return res;
+  }
+  const dow=(offset)=>DOW_AR.map((_,i)=>({d:i,s:Math.round((2000+Math.random()*8000)*(1+offset)),i:10+Math.round(Math.random()*30)}));
+  const topP=(prefix)=>['منتج أ','منتج ب','منتج ج','منتج د','منتج هـ','منتج و','منتج ز','منتج ح','منتج ط','منتج ي']
+    .map((n,i)=>({n:prefix+n, q:Math.round((100-i*8)*(1+Math.random()*.5)), r:Math.round((500-i*40)*(1+Math.random()*.5))}));
+  const botP=(prefix)=>['منتج ك','منتج ل','منتج م','منتج ن','منتج س'].map((n,i)=>({n:prefix+n,q:i+1,r:(i+1)*15}));
+  const combos=[
+    {a:'منتج أ',b:'منتج ب',t:28},{a:'منتج ج',b:'منتج د',t:19},
+    {a:'منتج أ',b:'منتج ج',t:14},{a:'منتج هـ',b:'منتج و',t:9},{a:'منتج ب',b:'منتج د',t:7}
+  ];
+  const payments1=[{n:'Cash',t:15800},{n:'شبكة',t:28200}];
+  const payments2=[{n:'Cash',t:9100},{n:'شبكة',t:19400}];
+
+  // week_daily: آخر 7 أيام
+  function weekDaily(offset) {
+    const res=[]; const now=new Date();
+    for(let i=6;i>=0;i--){
+      const d=new Date(now); d.setDate(d.getDate()-i);
+      const dow=d.getDay();
+      const base=[800,3200,3800,4100,4500,6200,5100];
+      res.push({date:d.toISOString().slice(0,10),dow,
+                s:Math.round(base[dow]*(1+offset+Math.random()*.2)),i:10+Math.round(Math.random()*20)});
+    }
+    return res;
+  }
+  // month_weekly: 4 أسابيع
+  function monthWeekly(offset) {
+    return [1,2,3,4].map(w=>({w,s:Math.round((18000+Math.random()*10000)*(1+offset)),i:60+Math.round(Math.random()*40)}));
+  }
+  // month_daily: هذا الشهر
+  function monthDaily(offset) {
+    const res=[]; const now=new Date();
+    for(let i=1;i<=now.getDate();i++){
+      const d=new Date(now.getFullYear(),now.getMonth(),i);
+      const base=[800,3200,3800,4100,4500,6200,5100];
+      res.push({date:d.toISOString().slice(0,10),
+                s:Math.round(base[d.getDay()]*(1+offset+Math.random()*.3)),i:8+Math.round(Math.random()*18)});
+    }
+    return res;
+  }
+  // weekly_history: آخر 6 أشهر (أسبوعياً)
+  function weeklyHistory(offset) {
+    const res=[]; const now=new Date();
+    for(let mBack=5;mBack>=0;mBack--){
+      const d=new Date(now); d.setDate(1); d.setMonth(d.getMonth()-mBack);
+      const ym=d.toISOString().slice(0,7);
+      for(let w=1;w<=4;w++){
+        res.push({month:ym,w,
+                  s:Math.round((14000+Math.random()*10000)*(1+offset)),
+                  i:Math.round(45+Math.random()*35)});
+      }
+    }
+    return res;
+  }
+  // daily_history: آخر 55 يوم
+  function dailyHistory(offset) {
+    const res=[]; const now=new Date();
+    for(let i=55;i>=0;i--){
+      const d=new Date(now); d.setDate(d.getDate()-i);
+      const dow=d.getDay();
+      const base=[800,3200,3800,4100,4500,6200,5100];
+      res.push({date:d.toISOString().slice(0,10),dow,
+                s:Math.round(base[dow]*(1+offset+Math.random()*.3)),
+                i:8+Math.round(Math.random()*18)});
+    }
+    return res;
+  }
+
+  return [
+    {
+      branch:'فرع 1', timestamp: new Date().toISOString().slice(0,19).replace('T',' '),
+      today_sales:4250,today_invoices:18,today_avg_basket:236,
+      week_sales:27400,week_invoices:108,
+      month_sales:98000,month_invoices:412,
+      year_sales:860000,year_invoices:3840,
+      hourly_today: hrs30(.2).map(r=>({...r,s:Math.round(r.s*.3)})),
+      hourly_30d: hrs30(.2),
+      monthly_trend: monthly(0),
+      yearly_trend:[{y:'2023',s:520000,i:2200},{y:'2024',s:740000,i:3100},{y:'2025',s:860000,i:3840}],
+      day_of_week: dow(.1),
+      week_daily: weekDaily(.1),
+      month_weekly: monthWeekly(.1),
+      month_daily: monthDaily(.1),
+      top_products: topP(''),
+      bottom_products: botP(''),
+      combos, payment_types: payments1,
+      weekly_history: weeklyHistory(.1),
+      daily_history: dailyHistory(.1)
+    },
+    {
+      branch:'فرع 2', timestamp: new Date().toISOString().slice(0,19).replace('T',' '),
+      today_sales:3100,today_invoices:13,today_avg_basket:238,
+      week_sales:19500,week_invoices:78,
+      month_sales:71000,month_invoices:298,
+      year_sales:620000,year_invoices:2780,
+      hourly_today: hrs30(-.1).map(r=>({...r,s:Math.round(r.s*.2)})),
+      hourly_30d: hrs30(-.1),
+      monthly_trend: monthly(-.2),
+      yearly_trend:[{y:'2023',s:380000,i:1600},{y:'2024',s:540000,i:2250},{y:'2025',s:620000,i:2780}],
+      day_of_week: dow(-.1),
+      week_daily: weekDaily(-.1),
+      month_weekly: monthWeekly(-.1),
+      month_daily: monthDaily(-.1),
+      top_products: topP(''),
+      bottom_products: botP(''),
+      combos:[{a:'منتج أ',b:'منتج ج',t:15},{a:'منتج ب',b:'منتج هـ',t:11}],
+      payment_types: payments2,
+      weekly_history: weeklyHistory(-.1),
+      daily_history: dailyHistory(-.1)
+    }
+  ];
+}
+
+// ══════════════════════════════════════════════════════
+// جلب البيانات
+// ══════════════════════════════════════════════════════
+function fetchData() {
+  if (APPS_SCRIPT_URL === 'YOUR_APPS_SCRIPT_URL_HERE') {
+    allBranches = generateDemo();
+    render(); return;
+  }
+  const btn = document.getElementById('refresh-btn');
+  if (btn) { btn.classList.add('loading'); btn.innerHTML = '<span class="loading-dot">↻</span> جارٍ...'; }
+
+  const url = APPS_SCRIPT_URL + '?t=' + Date.now();
+  const xhr = new XMLHttpRequest();
+  xhr.open('GET', url, true);
+  xhr.timeout = 20000;
+  xhr.onload = function() {
+    try {
+      const json = JSON.parse(xhr.responseText);
+      allBranches = (json.branches && json.branches.length) ? json.branches : generateDemo();
+    } catch(e) { allBranches = generateDemo(); }
+    render();
+    if (btn) { btn.classList.remove('loading'); btn.innerHTML = '↻ تحديث'; }
+  };
+  xhr.onerror = xhr.ontimeout = function() {
+    allBranches = generateDemo();
+    render();
+    if (btn) { btn.classList.remove('loading'); btn.innerHTML = '↻ تحديث'; }
+  };
+  xhr.send();
+}
+
+function manualRefresh() {
+  const btn = document.getElementById('refresh-btn');
+  if (btn && btn.classList.contains('loading')) return;
+  fetchData();
+}
+
+// ══════════════════════════════════════════════════════
+// Helpers
+// ══════════════════════════════════════════════════════
+function visible() {
+  if (currentBranch === 'all') return allBranches;
+  return allBranches.filter(b => b.branch === currentBranch);
+}
+
+function mergeArr(key, groupBy, valKey) {
+  const map = {};
+  visible().forEach(b => {
+    (b[key] || []).forEach(r => {
+      const k = r[groupBy];
+      map[k] = (map[k] || 0) + (r[valKey] || 0);
+    });
+  });
+  return map;
+}
+
+function totalOf(key) { return visible().reduce((s,b)=>s+(b[key]||0),0); }
+
+function salesKey() {
+  return {day:'today_sales',week:'week_sales',month:'month_sales',year:'year_sales'}[currentPeriod];
+}
+function invKey() {
+  return {day:'today_invoices',week:'week_invoices',month:'month_invoices',year:'year_invoices'}[currentPeriod];
+}
+function periodLabel() {
+  return {day:'اليوم',week:'الأسبوع',month:'الشهر',year:'السنة'}[currentPeriod];
+}
+
+function fmt(n) { return (n||0).toLocaleString('ar-SA'); }
+
+function killChart(id) { if (charts[id]) { charts[id].destroy(); delete charts[id]; } }
+
+function pct(curr, prev) {
+  if (!prev) return null;
+  return ((curr - prev) / prev * 100).toFixed(1);
+}
+
+function badge(val) {
+  if (val === null) return '';
+  const cls = val > 0 ? 'up' : val < 0 ? 'down' : 'flat';
+  const arrow = val > 0 ? '▲' : val < 0 ? '▼' : '—';
+  return `<span class="badge ${cls}">${arrow} ${Math.abs(val)}%</span>`;
+}
+
+// ══════════════════════════════════════════════════════
+// Build branch pills
+// ══════════════════════════════════════════════════════
+function buildBranchPills() {
+  const c = document.getElementById('branch-pills');
+  const branches = allBranches.map(b => b.branch);
+  c.innerHTML = [
+    `<button class="pill ball ${currentBranch==='all'?'active':''}" onclick="setBranch('all',this)">الكل</button>`,
+    ...branches.map((br,i)=>`<button class="pill b${i+1} ${currentBranch===br?'active':''}" onclick="setBranch('${br}',this)">${br}</button>`)
+  ].join('');
+}
+
+// ══════════════════════════════════════════════════════
+// KPI row
+// ══════════════════════════════════════════════════════
+function renderKPIs() {
+  const sales = totalOf(salesKey());
+  const inv   = totalOf(invKey());
+  const avg   = inv > 0 ? Math.round(sales / inv) : 0;
+  const mSales = totalOf('month_sales');
+  const ySales = totalOf('year_sales');
+
+  // find peak hour from hourly_today first, fallback to 30d
+  const todayHMap = mergeArr('hourly_today','h','s');
+  const hourMap30 = mergeArr('hourly_30d','h','s');
+  const hourMap = Object.keys(todayHMap).length > 0 ? todayHMap : hourMap30;
+  let peakH = 0, peakV = 0;
+  Object.entries(hourMap).forEach(([h,s])=>{ if(s>peakV){peakV=s;peakH=+h;} });
+  const peakLabel = peakH < 12 ? `${peakH} ص` : peakH === 12 ? '12 م' : `${peakH-12} م`;
+
+  document.getElementById('kpis').innerHTML = `
+    <div class="kpi blue">
+      <div class="kpi-icon">💰</div>
+      <div class="kpi-label">مبيعات ${periodLabel()}</div>
+      <div class="kpi-val">${fmt(sales)}</div>
+      <div class="kpi-sub">ر.س</div>
+    </div>
+    <div class="kpi amber">
+      <div class="kpi-icon">🧾</div>
+      <div class="kpi-label">فواتير ${periodLabel()}</div>
+      <div class="kpi-val">${fmt(inv)}</div>
+      <div class="kpi-sub">فاتورة</div>
+    </div>
+    <div class="kpi green">
+      <div class="kpi-icon">🛒</div>
+      <div class="kpi-label">متوسط الفاتورة</div>
+      <div class="kpi-val">${fmt(avg)}</div>
+      <div class="kpi-sub">ر.س / فاتورة</div>
+    </div>
+    <div class="kpi purple">
+      <div class="kpi-icon">📅</div>
+      <div class="kpi-label">مبيعات الشهر</div>
+      <div class="kpi-val">${fmt(mSales)}</div>
+      <div class="kpi-sub">ر.س</div>
+    </div>
+    <div class="kpi cyan">
+      <div class="kpi-icon">📈</div>
+      <div class="kpi-label">مبيعات السنة</div>
+      <div class="kpi-val">${fmt(ySales)}</div>
+      <div class="kpi-sub">ر.س</div>
+    </div>
+    <div class="kpi amber">
+      <div class="kpi-icon">⏰</div>
+      <div class="kpi-label">ساعة الذروة</div>
+      <div class="kpi-val col-amber">${peakLabel}</div>
+      <div class="kpi-sub">أعلى مبيعات</div>
+    </div>
+  `;
+}
+
+// ══════════════════════════════════════════════════════
+// Tab: Overview
+// ══════════════════════════════════════════════════════
+function renderOverview() {
+  // Monthly line (last 7 months)
+  killChart('overview-line');
+  const mdata = {};
+  visible().forEach(b => {
+    (b.monthly_trend||[]).slice(-7).forEach(r => {
+      mdata[r.m] = (mdata[r.m]||0) + r.s;
+    });
+  });
+  const mLabels = Object.keys(mdata).sort();
+  const mVals   = mLabels.map(k=>mdata[k]);
+
+  charts['overview-line'] = new Chart(
+    document.getElementById('chart-overview-line'), {
+    type:'line',
+    data:{
+      labels: mLabels.map(m=>m.slice(5)),
+      datasets:[{
+        label:'المبيعات',data:mVals,
+        borderColor:'#3b82f6',backgroundColor:'rgba(59,130,246,.1)',
+        fill:true,tension:.4,pointRadius:3
+      }]
+    },
+    options:{responsive:true,plugins:{legend:{display:false}},
+      scales:{x:{grid:{display:false}},y:{grid:{color:'#1f2937'}}}}
+  });
+
+  // Payment donut
+  killChart('payment');
+  const payMap = {};
+  visible().forEach(b => { (b.payment_types||[]).forEach(p=>{ payMap[p.n]=(payMap[p.n]||0)+p.t; }); });
+  const pKeys = Object.keys(payMap);
+  if (pKeys.length > 0) {
+    charts['payment'] = new Chart(document.getElementById('chart-payment'), {
+      type:'doughnut',
+      data:{
+        labels: pKeys,
+        datasets:[{data:pKeys.map(k=>payMap[k]),backgroundColor:COLORS,borderWidth:0}]
+      },
+      options:{responsive:true,cutout:'65%',plugins:{legend:{position:'bottom'}}}
+    });
+  }
+
+  // Top product card
+  const topP = visible().flatMap(b=>b.top_products||[])
+    .sort((a,b)=>b.q-a.q)[0];
+  document.getElementById('top1-content').innerHTML = topP
+    ? `<div class="highlight-val col-blue" style="font-size:16px">${topP.n}</div>
+       <div class="kpi-sub" style="margin-top:8px">${fmt(topP.q)} وحدة | ${fmt(topP.r)} ر.س</div>`
+    : '<div class="no-data">لا بيانات</div>';
+
+  // Peak hour card
+  const hourMap = mergeArr('hourly_30d','h','s');
+  let peakH=0,peakV=0,deadH=0,deadV=Infinity;
+  Object.entries(hourMap).forEach(([h,s])=>{
+    if(s>peakV){peakV=s;peakH=+h;}
+    if(s<deadV&&s>0){deadV=s;deadH=+h;}
+  });
+  const fmtH = h => h<12?`${h}:00 ص`:h===12?'12:00 م':`${h-12}:00 م`;
+  document.getElementById('peak-hour-content').innerHTML = `
+    <div class="highlight-val col-green" style="font-size:20px">${fmtH(peakH)}</div>
+    <div class="kpi-sub" style="margin-top:6px">أعلى مبيعات: ${fmt(peakV)} ر.س</div>`;
+
+  // Best day card
+  const dowMap = {};
+  visible().forEach(b=>{ (b.day_of_week||[]).forEach(r=>{ dowMap[r.d]=(dowMap[r.d]||0)+r.s; }); });
+  let bestD=0,bestV=0;
+  Object.entries(dowMap).forEach(([d,s])=>{ if(s>bestV){bestV=s;bestD=+d;} });
+  document.getElementById('best-day-content').innerHTML = `
+    <div class="highlight-val col-purple" style="font-size:20px">${DOW_AR[bestD]}</div>
+    <div class="kpi-sub" style="margin-top:6px">متوسط: ${fmt(bestV)} ر.س</div>`;
+}
+
+// ══════════════════════════════════════════════════════
+// Tab: Trends
+// ══════════════════════════════════════════════════════
+function renderTrends() {
+  // Monthly trend
+  killChart('monthly');
+  const mmap = {};
+  visible().forEach(b=>{ (b.monthly_trend||[]).forEach(r=>{ mmap[r.m]=(mmap[r.m]||0)+r.s; }); });
+  const mL = Object.keys(mmap).sort();
+  const mV = mL.map(k=>mmap[k]);
+  // growth line
+  const growth = mV.map((v,i)=> i===0?0:pct(v,mV[i-1]));
+
+  charts['monthly'] = new Chart(document.getElementById('chart-monthly'),{
+    type:'bar',
+    data:{
+      labels:mL.map(m=>m.slice(5)),
+      datasets:[
+        {label:'المبيعات',data:mV,backgroundColor:'rgba(59,130,246,.7)',borderRadius:4,order:2},
+        {label:'نمو%',data:growth,type:'line',borderColor:'#22c55e',
+         backgroundColor:'transparent',tension:.4,pointRadius:3,order:1,yAxisID:'y2'}
+      ]
+    },
+    options:{responsive:true,
+      scales:{
+        x:{grid:{display:false}},
+        y:{grid:{color:'#1f2937'},position:'right'},
+        y2:{grid:{display:false},position:'left',ticks:{callback:v=>v+'%'}}
+      }
+    }
+  });
+
+  // Yearly trend
+  killChart('yearly');
+  const ymap={};
+  visible().forEach(b=>{ (b.yearly_trend||[]).forEach(r=>{ ymap[r.y]=(ymap[r.y]||0)+r.s; }); });
+  const yL=Object.keys(ymap).sort(), yV=yL.map(k=>ymap[k]);
+  charts['yearly'] = new Chart(document.getElementById('chart-yearly'),{
+    type:'bar',
+    data:{
+      labels:yL,
+      datasets:[{label:'المبيعات السنوية',data:yV,
+        backgroundColor:yL.map((_,i)=>COLORS[i%COLORS.length]),borderRadius:6}]
+    },
+    options:{responsive:true,plugins:{legend:{display:false}},
+      scales:{x:{grid:{display:false}},y:{grid:{color:'#1f2937'}}}}
+  });
+
+  // Day of week
+  killChart('dow');
+  const dowmap={};
+  visible().forEach(b=>{ (b.day_of_week||[]).forEach(r=>{ dowmap[r.d]=(dowmap[r.d]||0)+r.s; }); });
+  const dV = DOW_AR.map((_,i)=>dowmap[i]||0);
+  charts['dow'] = new Chart(document.getElementById('chart-dow'),{
+    type:'bar',
+    data:{
+      labels:DOW_AR,
+      datasets:[{label:'المبيعات',data:dV,
+        backgroundColor:dV.map(v=>{
+          const max=Math.max(...dV);
+          return v===max?'#22c55e':'rgba(59,130,246,.5)';
+        }),borderRadius:4}]
+    },
+    options:{responsive:true,plugins:{legend:{display:false}},
+      scales:{x:{grid:{display:false}},y:{grid:{color:'#1f2937'}}}}
+  });
+}
+
+// ══════════════════════════════════════════════════════
+// helpers للمخططات
+// ══════════════════════════════════════════════════════
+function fmtH(h){ return h<12?`${h}:00 ص`:h===12?'12:00 م':`${h-12}:00 م`; }
+
+function makeBarChart(canvasId, labels, values, colors, opts={}) {
+  killChart(canvasId);
+  const maxV = Math.max(...values,1);
+  charts[canvasId] = new Chart(document.getElementById(canvasId),{
+    type:'bar',
+    data:{
+      labels,
+      datasets:[{
+        label: opts.label||'المبيعات',
+        data: values,
+        backgroundColor: colors || values.map(v=>v===maxV?'#22c55e':'rgba(59,130,246,.65)'),
+        borderRadius: 4
+      }]
+    },
+    options:{
+      responsive:true,
+      plugins:{legend:{display:!!opts.label}},
+      scales:{
+        x:{grid:{display:false}, ticks:{maxRotation: opts.rotate||0, font:{size:11}}},
+        y:{grid:{color:'#1f2937'}, ticks:{font:{size:11}}}
+      }
+    }
+  });
+}
+
+function makeLineChart(canvasId, labels, datasets) {
+  killChart(canvasId);
+  charts[canvasId] = new Chart(document.getElementById(canvasId),{
+    type:'line',
+    data:{ labels, datasets },
+    options:{
+      responsive:true,
+      plugins:{legend:{labels:{font:{size:11}}}},
+      scales:{
+        x:{grid:{display:false}},
+        y:{grid:{color:'#1f2937'}}
+      }
+    }
+  });
+}
+
+function highlightCard(label, val, sub, color) {
+  return `<div class="highlight">
+    <div class="highlight-label">${label}</div>
+    <div class="highlight-val ${color}">${val}</div>
+    <div class="highlight-sub">${sub}</div>
+  </div>`;
+}
+
+// ══════════════════════════════════════════════════════
+// Tab: تحليل تفاعلي — Power BI Drill-Down
+// ══════════════════════════════════════════════════════
+
+function drillDown(level, params) {
+  drillState = { ...drillState, level, ...params };
+  renderHours();
+}
+
+function drillBackTo(level) {
+  if      (level==='year')  drillState = {level:'year',  year:null,            month:null,           week:null, day:null};
+  else if (level==='month') drillState = {level:'month', year:drillState.year, month:null,           week:null, day:null};
+  else if (level==='week')  drillState = {level:'week',  year:drillState.year, month:drillState.month, week:null, day:null};
+  else if (level==='day')   drillState = {level:'day',   year:drillState.year, month:drillState.month, week:drillState.week, day:null};
+  renderHours();
+}
+
+function buildBreadcrumb() {
+  const {level, year, month, week, day} = drillState;
+  const parts = [];
+
+  if (level==='year') {
+    parts.push(`<span class="bc-current">جميع السنوات</span>`);
+  } else {
+    parts.push(`<span class="bc-link" onclick="drillBackTo('year')">جميع السنوات</span><span class="bc-sep">›</span>`);
+    if (level==='month') {
+      parts.push(`<span class="bc-current">${year}</span>`);
+    } else {
+      parts.push(`<span class="bc-link" onclick="drillBackTo('month')">${year}</span><span class="bc-sep">›</span>`);
+      const mName = MONTH_AR[parseInt((month||'').split('-')[1]||1)-1];
+      if (level==='week') {
+        parts.push(`<span class="bc-current">${mName}</span>`);
+      } else {
+        parts.push(`<span class="bc-link" onclick="drillBackTo('week')">${mName}</span><span class="bc-sep">›</span>`);
+        if (level==='day') {
+          parts.push(`<span class="bc-current">الأسبوع ${week}</span>`);
+        } else {
+          parts.push(`<span class="bc-link" onclick="drillBackTo('day')">الأسبوع ${week}</span><span class="bc-sep">›</span>`);
+          parts.push(`<span class="bc-current">${day}</span>`);
+        }
+      }
+    }
+  }
+  return `<div class="breadcrumb">${parts.join('')}</div>`;
+}
+
+function makeDrillChart(canvasId, labels, values, hintText, onClickFn, opts={}) {
+  killChart(canvasId);
+  const maxV = Math.max(...values, 1);
+  const canvas = document.createElement('canvas');
+  canvas.id = canvasId;
+  if (opts.height) canvas.setAttribute('height', opts.height);
+
+  charts[canvasId] = new Chart(canvas, {
+    type:'bar',
+    data:{
+      labels,
+      datasets:[{
+        label:'المبيعات', data:values,
+        backgroundColor: values.map(v=>v===maxV?'#22c55e':'rgba(59,130,246,.7)'),
+        hoverBackgroundColor: values.map(v=>v===maxV?'#16a34a':'#3b82f6'),
+        borderRadius:5
+      }]
+    },
+    options:{
+      responsive:true,
+      plugins:{
+        legend:{display:false},
+        tooltip:{callbacks:{label:ctx=>fmt(ctx.raw)+' ر.س'}}
+      },
+      scales:{
+        x:{grid:{display:false}, ticks:{maxRotation:opts.rotate||0, font:{size:opts.fontSize||12}}},
+        y:{grid:{color:'#1f2937'}}
+      },
+      onClick:(e, els)=>{ if(els.length && onClickFn) onClickFn(els[0].index, labels[els[0].index]); },
+      onHover:(e, els)=>{ e.native.target.style.cursor = (els.length && onClickFn)?'pointer':'default'; }
+    }
+  });
+
+  const wrap = document.createElement('div');
+  wrap.className = 'box';
+  wrap.style.marginBottom = '16px';
+  wrap.innerHTML = `<div class="box-title">${opts.title||''}${onClickFn?`<span>اضغط على أي شريط للتعمق ↓</span>`:''}</div>`;
+  wrap.appendChild(canvas);
+  if (hintText && onClickFn) {
+    const hint = document.createElement('div');
+    hint.className='drill-hint'; hint.textContent=hintText;
+    wrap.appendChild(hint);
+  }
+  return wrap;
+}
+
+function renderYearLevel(area) {
+  const ymap={};
+  visible().forEach(b=>{ (b.yearly_trend||[]).forEach(r=>{ ymap[r.y]=(ymap[r.y]||0)+r.s; }); });
+  const years=Object.keys(ymap).sort(), vals=years.map(y=>ymap[y]);
+  const maxV=Math.max(...vals,1), peakY=years[vals.indexOf(maxV)];
+  const total=vals.reduce((a,b)=>a+b,0);
+  const growthBadge=vals.length>=2?badge(pct(vals[vals.length-1],vals[vals.length-2])):'—';
+
+  document.getElementById('hours-highlights').innerHTML =
+    highlightCard('إجمالي كل السنوات', fmt(total)+' ر.س', years.length+' سنوات','col-blue')+
+    highlightCard('أفضل سنة', peakY, fmt(maxV)+' ر.س','col-green')+
+    highlightCard('نمو آخر سنة', growthBadge, 'مقارنة بالسابقة','col-amber');
+
+  area.innerHTML='';
+  area.appendChild(makeDrillChart('ch-d-year', years, vals, 'اضغط سنة لعرض أشهرها',
+    (idx, label)=>drillDown('month',{year:label}), {title:'المبيعات السنوية', height:160}));
+}
+
+function renderMonthLevel(area, year) {
+  const mmap={};
+  visible().forEach(b=>{
+    (b.monthly_trend||[]).forEach(r=>{ if(r.m.startsWith(year)) mmap[r.m]=(mmap[r.m]||0)+r.s; });
+  });
+  const months=Object.keys(mmap).sort(), vals=months.map(m=>mmap[m]);
+  const labels=months.map(m=>MONTH_AR[parseInt(m.split('-')[1])-1]);
+  const maxV=Math.max(...vals,1), peakIdx=vals.indexOf(maxV);
+  const total=vals.reduce((a,b)=>a+b,0);
+
+  document.getElementById('hours-highlights').innerHTML =
+    highlightCard('إجمالي '+year, fmt(total)+' ر.س', months.length+' أشهر','col-blue')+
+    highlightCard('أفضل شهر', labels[peakIdx]||'—', fmt(maxV)+' ر.س','col-green');
+
+  area.innerHTML='';
+  area.appendChild(makeDrillChart('ch-d-month', labels, vals, 'اضغط شهراً لعرض أسابيعه',
+    (idx)=>drillDown('week',{month:months[idx]}), {title:'أشهر '+year, height:150}));
+}
+
+function renderWeekLevel(area, year, month) {
+  const mName=MONTH_AR[parseInt(month.split('-')[1])-1];
+  const wmap={};
+  visible().forEach(b=>{
+    (b.weekly_history||[]).forEach(r=>{ if(r.month===month) wmap[r.w]=(wmap[r.w]||0)+r.s; });
+  });
+  const weeks=Object.keys(wmap).map(Number).sort((a,b)=>a-b), vals=weeks.map(w=>wmap[w]);
+  const labels=weeks.map(w=>`الأسبوع ${w}`);
+  const maxV=Math.max(...vals,1), peakW=weeks[vals.indexOf(maxV)];
+  const total=vals.reduce((a,b)=>a+b,0);
+
+  document.getElementById('hours-highlights').innerHTML =
+    highlightCard('إجمالي '+mName, fmt(total)+' ر.س', weeks.length+' أسابيع','col-blue')+
+    highlightCard('أفضل أسبوع', 'الأسبوع '+peakW, fmt(maxV)+' ر.س','col-green');
+
+  area.innerHTML='';
+  area.appendChild(makeDrillChart('ch-d-week', labels, vals, 'اضغط أسبوعاً لعرض أيامه',
+    (idx)=>drillDown('day',{week:weeks[idx]}), {title:'أسابيع '+mName+' '+year, height:140}));
+}
+
+function renderDayLevel(area, year, month, week) {
+  const mName=MONTH_AR[parseInt(month.split('-')[1])-1];
+  const dmap={};
+  visible().forEach(b=>{
+    (b.daily_history||[]).forEach(r=>{
+      if(r.date.startsWith(month)){
+        const d=new Date(r.date), wk=Math.ceil(d.getDate()/7);
+        if(wk===week) dmap[r.date]=(dmap[r.date]||0)+r.s;
+      }
+    });
+  });
+  const days=Object.keys(dmap).sort(), vals=days.map(d=>dmap[d]);
+  const labels=days.map(d=>{ const dt=new Date(d); return DOW_AR[dt.getDay()]+' '+dt.getDate(); });
+  const maxV=Math.max(...vals,1), peakIdx=vals.indexOf(maxV);
+  const total=vals.reduce((a,b)=>a+b,0);
+
+  document.getElementById('hours-highlights').innerHTML =
+    highlightCard('إجمالي الأسبوع '+week, fmt(total)+' ر.س', days.length+' أيام','col-blue')+
+    highlightCard('أفضل يوم', labels[peakIdx]||'—', fmt(maxV)+' ر.س','col-green');
+
+  area.innerHTML='';
+  area.appendChild(makeDrillChart('ch-d-day', labels, vals, 'اضغط على يوم لعرض ساعاته',
+    (idx)=>drillDown('hour',{day:days[idx]}), {title:'أيام الأسبوع '+week+' — '+mName+' '+year, height:140}));
+}
+
+function renderHourLevel(area, year, month, week, day) {
+  const today = new Date().toISOString().slice(0,10);
+  let hvals;
+  if (day === today) {
+    const hmap = mergeArr('hourly_today','h','s');
+    hvals = Array.from({length:24},(_,h) => hmap[h]||0);
+  } else {
+    const hmap = mergeArr('hourly_30d','h','s');
+    hvals = Array.from({length:24},(_,h) => hmap[h]||0);
+  }
+  const maxV = Math.max(...hvals,1);
+  const peakH = hvals.indexOf(maxV);
+  const top3 = [...hvals].map((v,i)=>({v,i})).sort((a,b)=>b.v-a.v).filter(x=>x.v>0).slice(0,3);
+
+  document.getElementById('hours-highlights').innerHTML =
+    highlightCard('ساعة الذروة', fmtH(peakH), fmt(maxV)+' ر.س','col-green') +
+    highlightCard('أقوى 3 ساعات', top3.map(x=>fmtH(x.i)).join(' | '), day,'col-amber') +
+    (day!==today ? highlightCard('ملاحظة','متوسط 30 يوم','بيانات تقريبية','col-red') : '');
+
+  const note = day!==today?' (متوسط آخر 30 يوم)':'';
+  area.innerHTML='';
+  area.appendChild(makeDrillChart('ch-d-hour',
+    Array.from({length:24},(_,h)=>fmtH(h)), hvals,
+    null, null, {title:'ساعات '+day+note, height:130, rotate:45, fontSize:10}));
+}
+
+function renderHours() {
+  const {level, year, month, week, day} = drillState;
+  const container = document.getElementById('hours-charts');
+  container.innerHTML = buildBreadcrumb()+'<div id="drill-area"></div>';
+  document.getElementById('hours-highlights').innerHTML='';
+  const area = document.getElementById('drill-area');
+
+  if      (level==='year')  renderYearLevel(area);
+  else if (level==='month') renderMonthLevel(area, year);
+  else if (level==='week')  renderWeekLevel(area, year, month);
+  else if (level==='day')   renderDayLevel(area, year, month, week);
+  else if (level==='hour')  renderHourLevel(area, year, month, week, day);
+}
+
+// ══════════════════════════════════════════════════════
+// Tab: Products
+// ══════════════════════════════════════════════════════
+function renderProducts() {
+  // Merge top products
+  const topMap={};
+  visible().forEach(b=>{ (b.top_products||[]).forEach(p=>{ topMap[p.n]={q:(topMap[p.n]?.q||0)+p.q,r:(topMap[p.n]?.r||0)+p.r}; }); });
+  const topArr = Object.entries(topMap).map(([n,v])=>({n,...v})).sort((a,b)=>b.q-a.q).slice(0,10);
+  const maxQ   = topArr[0]?.q || 1;
+
+  const prodRow = (p,i,color) => `
+    <tr>
+      <td><span class="rank">${i+1}</span></td>
+      <td>${p.n}
+        <div class="bar-wrap"><div class="bar-fill" style="width:${Math.round(p.q/maxQ*100)}%;background:${color}"></div></div>
+      </td>
+      <td>${fmt(p.q)} وحدة</td>
+      <td>${fmt(p.r)} ر.س</td>
+    </tr>`;
+
+  document.getElementById('table-top').innerHTML =
+    `<tr><th>#</th><th>المنتج</th><th>الكمية</th><th>الإيراد</th></tr>` +
+    topArr.map((p,i)=>prodRow(p,i,COLORS[0])).join('');
+
+  // Bottom products
+  const botMap={};
+  visible().forEach(b=>{ (b.bottom_products||[]).forEach(p=>{ botMap[p.n]={q:(botMap[p.n]?.q||0)+p.q,r:(botMap[p.n]?.r||0)+p.r}; }); });
+  const botArr = Object.entries(botMap).map(([n,v])=>({n,...v})).sort((a,b)=>a.q-b.q).slice(0,5);
+  const maxB   = botArr[botArr.length-1]?.q||1;
+
+  document.getElementById('table-bottom').innerHTML =
+    `<tr><th>#</th><th>المنتج</th><th>الكمية</th><th>الإيراد</th></tr>` +
+    botArr.map((p,i)=>prodRow(p,i,'#ef4444')).join('');
+
+  // Combos
+  const comboMap={};
+  visible().forEach(b=>{ (b.combos||[]).forEach(c=>{ const k=`${c.a}||${c.b}`; comboMap[k]={a:c.a,b:c.b,t:(comboMap[k]?.t||0)+c.t}; }); });
+  const comboArr = Object.values(comboMap).sort((a,b)=>b.t-a.t).slice(0,5);
+  document.getElementById('combo-list').innerHTML = comboArr.length
+    ? comboArr.map(c=>`
+        <div class="combo-item">
+          <div class="combo-names">${c.a}<span>+</span>${c.b}</div>
+          <div class="combo-times">${c.t} مرة</div>
+        </div>`).join('')
+    : '<div class="no-data">لا بيانات كافية — يحتاج فواتير أكثر</div>';
+}
+
+// ══════════════════════════════════════════════════════
+// Tab: Branches
+// ══════════════════════════════════════════════════════
+function renderBranches() {
+  killChart('branches');
+  const labels  = allBranches.map(b=>b.branch);
+  const today   = allBranches.map(b=>b.today_sales||0);
+  const month   = allBranches.map(b=>b.month_sales||0);
+  const year    = allBranches.map(b=>b.year_sales||0);
+
+  charts['branches'] = new Chart(document.getElementById('chart-branches'),{
+    type:'bar',
+    data:{
+      labels,
+      datasets:[
+        {label:'اليوم',data:today,backgroundColor:'#3b82f6',borderRadius:4},
+        {label:'الشهر ÷30',data:month.map(v=>Math.round(v/30)),backgroundColor:'#a855f7',borderRadius:4},
+        {label:'السنة ÷365',data:year.map(v=>Math.round(v/365)),backgroundColor:'#22c55e',borderRadius:4}
+      ]
+    },
+    options:{responsive:true,
+      scales:{x:{grid:{display:false}},y:{grid:{color:'#1f2937'}}}}
+  });
+
+  document.getElementById('table-branches').innerHTML =
+    `<tr><th>الفرع</th><th>آخر تحديث</th><th>مبيعات اليوم</th><th>فواتير اليوم</th><th>مبيعات الشهر</th><th>مبيعات السنة</th><th>متوسط الفاتورة</th></tr>` +
+    allBranches.map((b,i)=>{
+      const avg = b.today_invoices>0?Math.round(b.today_sales/b.today_invoices):0;
+      return `<tr>
+        <td><span style="color:${COLORS[i%COLORS.length]};font-weight:600">${b.branch}</span></td>
+        <td style="color:var(--t3)">${b.timestamp}</td>
+        <td>${fmt(b.today_sales)} ر.س</td>
+        <td>${fmt(b.today_invoices)}</td>
+        <td>${fmt(b.month_sales)} ر.س</td>
+        <td>${fmt(b.year_sales)} ر.س</td>
+        <td>${fmt(avg)} ر.س</td>
+      </tr>`;
+    }).join('');
+}
+
+// ══════════════════════════════════════════════════════
+// Main render
+// ══════════════════════════════════════════════════════
+function render() {
+  const activeTab = document.querySelector('.tab-content.active')?.id?.replace('tab-','') || 'overview';
+  buildBranchPills();
+  renderKPIs();
+  if (activeTab==='overview')  renderOverview();
+  if (activeTab==='trends')    renderTrends();
+  if (activeTab==='hours')     renderHours();
+  if (activeTab==='products')  renderProducts();
+  if (activeTab==='branches')  renderBranches();
+  document.getElementById('last-update').textContent =
+    'آخر تحديث: ' + new Date().toLocaleTimeString('ar-SA');
+
+  // hide setup notice once URL is set
+  if (APPS_SCRIPT_URL !== 'YOUR_APPS_SCRIPT_URL_HERE') {
+    document.getElementById('setup-notice').style.display='none';
+  }
+}
+
+// ══════════════════════════════════════════════════════
+// Controls
+// ══════════════════════════════════════════════════════
+function setBranch(branch, el) {
+  currentBranch = branch;
+  drillState = periodToDrillState();
+  document.querySelectorAll('#branch-pills .pill').forEach(p=>p.classList.remove('active'));
+  el.classList.add('active');
+  render();
+}
+
+function setPeriod(el) {
+  currentPeriod = el.dataset.period;
+  drillState = periodToDrillState();
+  document.querySelectorAll('#period-pills .pill').forEach(p=>p.classList.remove('active'));
+  el.classList.add('active');
+  render();
+}
+
+function setTab(name, el) {
+  document.querySelectorAll('.nav-tab').forEach(t=>t.classList.remove('active'));
+  document.querySelectorAll('.tab-content').forEach(t=>t.classList.remove('active'));
+  el.classList.add('active');
+  document.getElementById('tab-'+name).classList.add('active');
+  // render the newly visible tab
+  if (name==='overview')  renderOverview();
+  if (name==='trends')    renderTrends();
+  if (name==='hours')     renderHours();
+  if (name==='products')  renderProducts();
+  if (name==='branches')  renderBranches();
+}
+
+// ══════════════════════════════════════════════════════
+// Boot
+// ══════════════════════════════════════════════════════
+fetchData();
+setInterval(fetchData, 60000);
+</script>
+</body>
+</html>
